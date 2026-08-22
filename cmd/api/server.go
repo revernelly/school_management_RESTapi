@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	mw "restapi/internal/api/middlewares"
+	"time"
 )
 
 // The struct is lowercase we want to keep it private. No other package can access it.
@@ -17,7 +18,6 @@ type user struct {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello Root Route"))
-	fmt.Println("Hello Root Route")
 }
 
 func teachersHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,23 +25,18 @@ func teachersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		w.Write([]byte("Hello GET Method on Teachers Route"))
-		// fmt.Println("Hello GET Method on Teachers Route")
 		return
 	case http.MethodPost:
 		w.Write([]byte("Hello POST Method on Teachers Route"))
-		fmt.Println("Hello POST Method on Teachers Route")
 		return
 	case http.MethodPut:
 		w.Write([]byte("Hello PUT Method on Teachers Route"))
-		fmt.Println("Hello PUT Method on Teachers Route")
 		return
 	case http.MethodPatch:
 		w.Write([]byte("Hello PATCH Method on Teachers Route"))
-		fmt.Println("Hello PATCH Method on Teachers Route")
 		return
 	case http.MethodDelete:
 		w.Write([]byte("Hello DELETE Method on Teachers Route"))
-		fmt.Println("Hello DELETE Method on Teachers Route")
 		return
 	}
 }
@@ -50,23 +45,18 @@ func studentsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		w.Write([]byte("Hello GET Method on Students Route"))
-		fmt.Println("Hello GET Method on Students Route")
 		return
 	case http.MethodPost:
 		w.Write([]byte("Hello POST Method on Students Route"))
-		fmt.Println("Hello POST Method on Students Route")
 		return
 	case http.MethodPut:
 		w.Write([]byte("Hello PUT Method on Students Route"))
-		fmt.Println("Hello PUT Method on Students Route")
 		return
 	case http.MethodPatch:
 		w.Write([]byte("Hello PATCH Method on Students Route"))
-		fmt.Println("Hello PATCH Method on Students Route")
 		return
 	case http.MethodDelete:
 		w.Write([]byte("Hello DELETE Method on Students Route"))
-		fmt.Println("Hello DELETE Method on Students Route")
 		return
 	}
 }
@@ -75,23 +65,18 @@ func execsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		w.Write([]byte("Hello GET Method on Execs Route"))
-		fmt.Println("Hello GET Method on Execs Route")
 		return
 	case http.MethodPost:
 		w.Write([]byte("Hello POST Method on Execs Route"))
-		fmt.Println("Hello POST Method on Execs Route")
 		return
 	case http.MethodPut:
 		w.Write([]byte("Hello PUT Method on Execs Route"))
-		fmt.Println("Hello PUT Method on Execs Route")
 		return
 	case http.MethodPatch:
 		w.Write([]byte("Hello PATCH Method on Execs Route"))
-		fmt.Println("Hello PATCH Method on Execs Route")
 		return
 	case http.MethodDelete:
 		w.Write([]byte("Hello DELETE Method on Execs Route"))
-		fmt.Println("Hello DELETE Method on Execs Route")
 		return
 	}
 }
@@ -116,11 +101,22 @@ func main() {
 		MinVersion: tls.VersionTLS12,
 	}
 
+	rl := mw.NewRateLimiter(5, time.Minute)
+
+	hppOptions := mw.HPPOptions{
+		CheckQuery:                  true,
+		CheckBody:                   true,
+		CheckBodyOnlyForContentType: "application/x-www-form-urlencoded",
+		Whitelist:                   []string{"sortBy", "sortOrder", "name", "age", "class"},
+	}
+
+	secureMux := mw.Hpp(hppOptions)(rl.Middleware(mw.Compression(mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Cors(mux))))))
+
 	// Create custom server
 	server := &http.Server{
 		Addr: port,
 		// Handler: mux
-		Handler: mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Cors(mux))),
+		Handler: secureMux,
 		// Handler:   middlewares.Cors(mux),
 		TLSConfig: tlsConfig,
 	}
