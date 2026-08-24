@@ -8,8 +8,9 @@
 *.so
 *.dylib
 *.pem
-*.cnf
 *.mod
+.gitignore
+openssl.cnf
 
 
 # Test binary, built with `go test -c`
