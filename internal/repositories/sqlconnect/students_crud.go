@@ -9,6 +9,7 @@ import (
 	"restapi/internal/models"
 	"restapi/pkg/utils"
 	"strconv"
+	"strings"
 )
 
 func GetStudentsDbHandler(students []models.Student, r *http.Request) ([]models.Student, error) {
@@ -92,6 +93,10 @@ func AddStudentsDBHandler(newStudents []models.Student) ([]models.Student, error
 		res, err := stmt.Exec(values...)
 		if err != nil {
 			// http.Error(w, "Error inserting data into database", http.StatusInternalServerError)
+			fmt.Println("Error:", err.Error())
+			if strings.Contains(err.Error(), "a foreign key constraint fails (`school`.`students`, CONSTRAINT `1` FOREIGN KEY (`class`) REFERENCES `teachers` (`class`))") {
+				return nil, utils.ErrorHandler(err, "class/class teacher does not exist")
+			}
 			return nil, utils.ErrorHandler(err, "Error adding data")
 		}
 		lastID, err := res.LastInsertId()
