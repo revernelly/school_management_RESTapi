@@ -2,13 +2,13 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	mw "restapi/internal/api/middlewares"
 	"restapi/internal/api/router"
 	"restapi/internal/repositories/sqlconnect"
+	"restapi/pkg/utils"
 
 	"github.com/joho/godotenv"
 )
@@ -22,7 +22,7 @@ func main() {
 
 	_, err = sqlconnect.ConnectDb()
 	if err != nil {
-		fmt.Println("Error-----", err)
+		utils.ErrorHandler(err, "")
 		return
 	}
 
@@ -58,7 +58,6 @@ func main() {
 		TLSConfig: tlsConfig,
 	}
 
-	fmt.Println("Server is running on port:", port)
 	err = server.ListenAndServeTLS(cert, key)
 	if err != nil {
 		log.Fatalln("Error starting the server", err)
