@@ -253,3 +253,26 @@ func DeleteOneExec(id int) error {
 	}
 	return nil
 }
+
+func GetUserByUsername(w http.ResponseWriter, req models.Exec) (*models.Exec, bool) {
+	db, err := ConnectDb()
+	if err != nil {
+		utils.ErrorHandler(err, "error updating data")
+		http.Error(w, "Error connecting to database", http.StatusBadRequest)
+		return nil, true
+	}
+	defer db.Close()
+
+	user := &models.Exec{}
+	err = db.QueryRow(`SELECT id, first_name, last_name, email, username, password, inactive_status, role FROM execs WHERE username = ?`, req.Username).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Username, &user.Password, &user.InactiveStatus, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.ErrorHandler(err, "User not found")
+			http.Error(w, "User not found", http.StatusBadRequest)
+			return nil, true
+		}
+		http.Error(w, "database query error", http.StatusBadRequest)
+		return nil, true
+	}
+	return user, false
+}
