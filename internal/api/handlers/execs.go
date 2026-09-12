@@ -223,8 +223,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Search for user if user exists
-	user, shouldReturn := sqlconnect.GetUserByUsername(w, req)
-	if shouldReturn {
+	user, err := sqlconnect.GetUserByUsername(req.Username)
+	if err != nil {
+		http.Error(w, "Invalid username or password", http.StatusBadRequest)
 		return
 	}
 
@@ -277,6 +278,57 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Token: tokenString,
 	}
 	json.NewEncoder(w).Encode(response)
+}
 
-	// Send token as a response or as a cookie
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Bearer",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Unix(0, 0),
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "logged out successfully"}`))
+}
+
+func UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	userId, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid Exec ID", http.StatusBadRequest)
+		return
+	}
+
+	var req models.UpdatePasswordRequest
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
+	}
+	r.Body.Close()
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		http.Error(w, "Please enter password", http.StatusBadRequest)
+		return
+	}
+
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		utils.ErrorHandler(err, "Database connection error")
+		return
+	}
+	defer db.Close()
+
+	var username string
+	var userPassword string
+
+	err = db.QueryRow(`SELECT username, password FROM execs WHERE id = ?`, userId).Scan(&username, &userPassword)
+	if err != nil {
+		utils.ErrorHandler(err, "User not found")
+		return
+	}
 }
