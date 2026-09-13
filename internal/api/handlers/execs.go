@@ -316,19 +316,29 @@ func UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := sqlconnect.ConnectDb()
+	_, err = sqlconnect.UpdatePasswordInDb(userId, req.CurrentPassword, req.NewPassword)
 	if err != nil {
-		utils.ErrorHandler(err, "Database connection error")
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	defer db.Close()
 
-	var username string
-	var userPassword string
+	// // Send token as a response or as a cookie
+	// http.SetCookie(w, &http.Cookie{
+	// 	Name:     "Bearer",
+	// 	Value:    token,
+	// 	Path:     "/",
+	// 	HttpOnly: true,
+	// 	Secure:   true,
+	// 	Expires:  time.Now().Add(24 * time.Hour),
+	// 	SameSite: http.SameSiteStrictMode,
+	// })
 
-	err = db.QueryRow(`SELECT username, password FROM execs WHERE id = ?`, userId).Scan(&username, &userPassword)
-	if err != nil {
-		utils.ErrorHandler(err, "User not found")
-		return
+	// Response Body
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Message string `json:"message"`
+	}{
+		Message: "password updated successfully",
 	}
+	json.NewEncoder(w).Encode(response)
 }
