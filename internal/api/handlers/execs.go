@@ -342,3 +342,29 @@ func UpdatePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(response)
 }
+
+func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
+	}
+	r.Body.Close()
+
+	if req.Email == "" {
+		http.Error(w, "Please enter email", http.StatusBadRequest)
+		return
+	}
+
+	err = sqlconnect.ForgotPasswordDbHandler(req.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// respond with success confirmation
+	fmt.Fprintf(w, "password reset link sent to %s", req.Email)
+}
