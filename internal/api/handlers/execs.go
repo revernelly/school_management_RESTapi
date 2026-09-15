@@ -368,3 +368,33 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	// respond with success confirmation
 	fmt.Fprintf(w, "password reset link sent to %s", req.Email)
 }
+
+func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("resetcode")
+
+	var req models.ResetPasswordRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid values in request", http.StatusBadRequest)
+		return
+	}
+
+	// Data validation for blank values
+	if req.NewPassword != req.ConfirmPassword {
+		http.Error(w, "Passwords should match", http.StatusBadRequest)
+		return
+	}
+
+	if req.NewPassword == "" || req.ConfirmPassword == "" {
+		http.Error(w, "Please enter passwords", http.StatusBadRequest)
+		return
+	}
+
+	err = sqlconnect.ResetPasswordDbHandler(token, req.NewPassword)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	fmt.Fprintln(w, "Password reset successfully!")
+}
