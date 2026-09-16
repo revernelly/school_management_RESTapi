@@ -26,11 +26,11 @@ func isValidSortField(field string) bool {
 	return validFields[field]
 }
 
-func GetTeachersDbHandler(teachers []models.Teacher, r *http.Request) ([]models.Teacher, error) {
+func GetTeachersDbHandler(teachers []models.Teacher, r *http.Request, limit, page int) ([]models.Teacher, int, error) {
 	db, err := ConnectDb()
 	if err != nil {
 		// http.Error(w, "Error connecting to database", http.StatusBadRequest)
-		return nil, utils.ErrorHandler(err, "Error retrieving data")
+		return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 	}
 	defer db.Close()
 
@@ -40,13 +40,18 @@ func GetTeachersDbHandler(teachers []models.Teacher, r *http.Request) ([]models.
 
 	query, args = utils.AddFilters(r, query, args)
 
+	// Add pagination
+	offset := (page - 1) * limit
+	query += ` LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
 	query = utils.AddSorting(r, query)
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		fmt.Println(err)
 		// http.Error(w, "Database Query Error", http.StatusInternalServerError)
-		return nil, utils.ErrorHandler(err, "Error retrieving data")
+		return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 	}
 	defer rows.Close()
 
@@ -56,11 +61,19 @@ func GetTeachersDbHandler(teachers []models.Teacher, r *http.Request) ([]models.
 		err := rows.Scan(&teacher.ID, &teacher.FirstName, &teacher.LastName, &teacher.Email, &teacher.Class, &teacher.Subject)
 		if err != nil {
 			// http.Error(w, "Error scanning database results", http.StatusInternalServerError)
-			return nil, utils.ErrorHandler(err, "Error retrieving data")
+			return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 		}
 		teachers = append(teachers, teacher)
 	}
-	return teachers, nil
+
+	// Get total teachers count
+	var totalTeachers int
+	err = db.QueryRow(`SELECT COUNT(*) FROM teachers`).Scan(&totalTeachers)
+	if err != nil {
+		utils.ErrorHandler(err, "")
+		totalTeachers = 0
+	}
+	return teachers, totalTeachers, nil
 }
 
 func GetTeacherByID(id int) (models.Teacher, error) {

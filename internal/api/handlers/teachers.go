@@ -8,26 +8,34 @@ import (
 	"net/http"
 	"restapi/internal/models"
 	"restapi/internal/repositories/sqlconnect"
+	"restapi/pkg/utils"
 	"strconv"
 )
 
 func GetTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
 	var teachers []models.Teacher
-	teachers, err := sqlconnect.GetTeachersDbHandler(teachers, r)
+	// url?limit=10&page=1
+	// pagination
+	page, limit := utils.GetPaginationParams(r)
+	teachers, totalTeachers, err := sqlconnect.GetTeachersDbHandler(teachers, r, limit, page)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	response := struct {
-		Status string           `json:"status"`
-		Count  int              `json:"count"`
-		Data   []models.Teacher `json:"data"`
+		Status   string           `json:"status"`
+		Count    int              `json:"count"`
+		Page     int              `json:"page"`
+		PageSize int              `json:"page_size"`
+		Data     []models.Teacher `json:"data"`
 	}{
-		Status: "Success",
-		Count:  len(teachers),
-		Data:   teachers,
+		Status:   "Success",
+		Count:    totalTeachers,
+		Page:     page,
+		PageSize: limit,
+		Data:     teachers,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
