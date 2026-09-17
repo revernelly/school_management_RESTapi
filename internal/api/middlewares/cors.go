@@ -13,9 +13,11 @@ var allowedOrigins = []string{
 }
 
 func Cors(next http.Handler) http.Handler {
+	fmt.Println("Cors Middleware...")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Cors Middleware being returned...")
 		origin := r.Header.Get("Origin")
-		fmt.Println(origin)
+		// fmt.Println(origin)
 
 		if isOriginAllowed(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)

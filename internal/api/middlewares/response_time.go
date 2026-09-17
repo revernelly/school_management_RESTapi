@@ -7,6 +7,7 @@ import (
 )
 
 func ResponseTimeMiddleware(next http.Handler) http.Handler {
+	fmt.Println("Response Time Middleware...")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Received Request in Response Time")
 		start := time.Now()

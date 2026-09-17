@@ -389,17 +389,21 @@ func DeleteTeachers(ids []int) ([]int, error) {
 	return deletedIds, nil
 }
 
-func GetStudentsByTeacherIdFromDb(teacherId string, students []models.Student) ([]models.Student, error) {
+func GetStudentsByTeacherIdFromDb(teacherId string, students []models.Student, limit, page int) ([]models.Student, int, error) {
 	db, err := ConnectDb()
 	if err != nil {
-		return nil, utils.ErrorHandler(err, "Error retrieving data")
+		return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 	}
 	defer db.Close()
 
-	query := `SELECT id, first_name, last_name, email, class FROM students WHERE class = (SELECT class FROM teachers WHERE id = ?)`
-	rows, err := db.Query(query, teacherId)
+	// Calculate offset
+	offset := (page - 1) * limit
+
+	// Get paginated students
+	query := `SELECT id, first_name, last_name, email, class FROM students WHERE class = (SELECT class FROM teachers WHERE id = ?)LIMIT ? OFFSET ?`
+	rows, err := db.Query(query, teacherId, limit, offset)
 	if err != nil {
-		return nil, utils.ErrorHandler(err, "Error retrieving data")
+		return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 	}
 	defer rows.Close()
 
@@ -407,15 +411,25 @@ func GetStudentsByTeacherIdFromDb(teacherId string, students []models.Student) (
 		var student models.Student
 		err := rows.Scan(&student.ID, &student.FirstName, &student.LastName, &student.Email, &student.Class)
 		if err != nil {
-			return nil, utils.ErrorHandler(err, "Error retrieving data")
+			return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 		}
 		students = append(students, student)
 	}
 	err = rows.Err()
 	if err != nil {
-		return nil, utils.ErrorHandler(err, "Error retrieving data")
+		return nil, 0, utils.ErrorHandler(err, "Error retrieving data")
 	}
-	return students, nil
+
+	// Get total number of students belonging to a specific teacher
+	var totalStudents int
+
+	countQuery := `SELECT COUNT(*) FROM students WHERE class = (SELECT class FROM teachers WHERE id = ?)`
+	err = db.QueryRow(countQuery, teacherId).Scan(&totalStudents)
+	if err != nil {
+		return nil, 0, utils.ErrorHandler(err, "Error retrieving student count")
+	}
+
+	return students, totalStudents, nil
 }
 
 func GetStudentCountByTeacherIdFromDb(teacherId string) (int, error) {

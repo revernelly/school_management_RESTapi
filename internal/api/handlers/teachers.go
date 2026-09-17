@@ -274,23 +274,36 @@ func DeleteTeachersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStudentsByTeacherId(w http.ResponseWriter, r *http.Request) {
+	// admin, manager, exec
+	_, err := utils.AuthorizeUser(r.Context().Value(utils.ContextKey("role")).(string), "admin", "manager", "exec")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	teacherId := r.PathValue("id")
 
 	var students []models.Student
-	students, err := sqlconnect.GetStudentsByTeacherIdFromDb(teacherId, students)
+	// url?limit=10&page=1
+	// pagination
+	page, limit := utils.GetPaginationParams(r)
+	students, totalStudents, err := sqlconnect.GetStudentsByTeacherIdFromDb(teacherId, students, limit, page)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	response := struct {
-		Status string           `json:"status"`
-		Count  int              `json:"count"`
-		Data   []models.Student `json:"data"`
+		Status   string           `json:"status"`
+		Count    int              `json:"count"`
+		Page     int              `json:"page"`
+		PageSize int              `json:"page_size"`
+		Data     []models.Student `json:"data"`
 	}{
-		Status: "Success",
-		Count:  len(students),
-		Data:   students,
+		Status:   "Success",
+		Count:    totalStudents,
+		Page:     page,
+		PageSize: limit,
+		Data:     students,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -298,11 +311,18 @@ func GetStudentsByTeacherId(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStudentCountByTeacherId(w http.ResponseWriter, r *http.Request) {
+	// admin, manager, exec
+	_, err := utils.AuthorizeUser(r.Context().Value(utils.ContextKey("role")).(string), "admin", "manager", "exec")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	teacherId := r.PathValue("id")
 
 	var studentCount int
 
-	studentCount, err := sqlconnect.GetStudentCountByTeacherIdFromDb(teacherId)
+	studentCount, err = sqlconnect.GetStudentCountByTeacherIdFromDb(teacherId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
